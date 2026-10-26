@@ -1,0 +1,105 @@
+--- a/kernel/gpu_unlock/main.c
++++ b/kernel/gpu_unlock/main.c
+@@ -6,7 +6,15 @@
+ #include <linux/string.h>
+ 
+ #include "unlock_610.h"
++#include "pci_lock_compat.h"
+ #include "arch_610.h"
++
++/* Read by the DSM single-target startup gate only after module init finishes.
++ * Do not treat a successful modprobe as proof that the GPU transaction passed.
++ */
++static int transaction_result = -EINPROGRESS;
++module_param(transaction_result, int, 0444);
++MODULE_PARM_DESC(transaction_result, "result of the last completed target transaction; DSM integration requires one exact target");
+ 
+ static char *targets;
+ module_param(targets, charp, 0444);
+@@ -133,9 +141,10 @@
+ 	struct pci_dev *pdev = data;
+ 	int ret;
+ 
+-	pci_dev_lock(pdev);
++	gu_pci_dev_lock(pdev);
+ 	ret = pdev->driver ? -EBUSY : gpu_unlock_610_unlock(pdev, &shared);
+-	pci_dev_unlock(pdev);
++	gu_pci_dev_unlock(pdev);
++	WRITE_ONCE(transaction_result, ret);
+ 	if (ret == -EALREADY)
+ 		pci_info(pdev, "gpu_unlock: already unlocked (PLM open at entry), skipping\n");
+ 	else if (ret)
+--- a/kernel/gpu_unlock/unlock_610.c
++++ b/kernel/gpu_unlock/unlock_610.c
+@@ -4,7 +4,11 @@
+  * the board ROM, Booter with the V67 signature, the SS0/SS1 selector writes, then
+  * FLR so the stock driver starts from a clean, halted GSP.
+  */
++#if __has_include(<crypto/sha2.h>)
+ #include <crypto/sha2.h>
++#else
++#include <crypto/sha.h>
++#endif
+ #include <linux/delay.h>
+ #include <linux/dma-mapping.h>
+ #include <linux/firmware.h>
+--- a/kernel/gpu_unlock/aperture_compat.h
++++ b/kernel/gpu_unlock/aperture_compat.h
+@@ -12,7 +12,7 @@
+ {
+ 	return aperture_remove_conflicting_pci_devices(pdev, "gpu_unlock");
+ }
+-#else
++#elif __has_include(<drm/drm_aperture.h>)
+ #include <drm/drm_aperture.h>
+ #include <drm/drm_drv.h>
+ static inline int gpu_unlock_remove_apertures(struct pci_dev *pdev)
+@@ -21,6 +21,19 @@
+ 
+ 	return drm_aperture_remove_conflicting_pci_framebuffers(pdev, &requester);
+ }
++#else
++#include <linux/fb.h>
++static inline int gpu_unlock_remove_apertures(struct pci_dev *pdev)
++{
++#if IS_ENABLED(CONFIG_FB)
++    return remove_conflicting_pci_framebuffers(pdev, "gpu_unlock");
++#else
++    /* CONFIG_FB=n means no kernel framebuffer owner can hold this aperture.
++     * The main transaction still rejects any device bound to another driver.
++     */
++    return 0;
++#endif
++}
+ #endif
+ 
+ #endif
+--- /dev/null
++++ b/kernel/gpu_unlock/pci_lock_compat.h
+@@ -0,0 +1,26 @@
++/* SPDX-License-Identifier: GPL-2.0-only */
++#ifndef GPU_UNLOCK_PCI_LOCK_COMPAT_H
++#define GPU_UNLOCK_PCI_LOCK_COMPAT_H
++/* Match Linux 5.10 drivers/pci/pci.c's private pci_dev_lock()/unlock()
++ * using its exported primitives. Keep config access and driver binding locked.
++ */
++#ifndef __KERNEL__
++#ifndef WRITE_ONCE
++#define WRITE_ONCE(var, value) ((var) = (value))
++#endif
++/* Keep the upstream host-side PCI lock mocks usable. */
++#define gu_pci_dev_lock pci_dev_lock
++#define gu_pci_dev_unlock pci_dev_unlock
++#else
++static inline void gu_pci_dev_lock(struct pci_dev *pdev)
++{
++    pci_cfg_access_lock(pdev);
++    device_lock(&pdev->dev);
++}
++static inline void gu_pci_dev_unlock(struct pci_dev *pdev)
++{
++    device_unlock(&pdev->dev);
++    pci_cfg_access_unlock(pdev);
++}
++#endif /* __KERNEL__ */
++#endif

@@ -1,0 +1,15 @@
+/work/
+/build/
+/inputs/
+/assets/
+__pycache__/
+*.pyc
+*.ko
+*.bin
+*.tgz
+*.tar.*
+mode.json
+last-result.json
+*.pem
+*.key
+.env

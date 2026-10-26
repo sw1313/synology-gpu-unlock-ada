@@ -1,0 +1,21 @@
+{
+  "command": "0x20801230",
+  "rates": {
+    "imla0": 0,
+    "fmla16": 0,
+    "dp": 0,
+    "fmla32": 1,
+    "ffma": 0,
+    "imla1": 0,
+    "imla2": 1,
+    "imla3": 0,
+    "imla4": 1
+  },
+  "meaning": "0=full; 1=half; 2=quarter; higher values are further reductions",
+  "hardware_changes": false,
+  "test_gpu": {
+    "model": "NVIDIA GeForce RTX 4060 Ti 16GB",
+    "driver": "595.99.02",
+    "power_limit_W": 165
+  }
+}

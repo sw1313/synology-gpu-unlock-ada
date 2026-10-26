@@ -1,0 +1,19 @@
+Synology integration and compatibility changes: sw1313, 2026-10-26.
+Integration scripts and compatibility patch: GPL-2.0-only, without warranty.
+
+This repository builds on JustAResearcher/gpu-unlock-ada, pinned to
+d28c485418c3d9d034cd4bac19200bc33dd3453b (GPL-2.0-only).
+runtime/read_sm_rates.py is an unmodified source copy from that commit.
+The patch modifies main.c, unlock_610.c and aperture_compat.h and adds
+pci_lock_compat.h. Modification date: 2026-10-26.
+
+The exploit, firmware generators and payload originate upstream; this project
+contributes DSM integration, Linux 5.10 compatibility and additional validation.
+See upstream README, credits and licenses for JustAResearcher, Zagitta/gpu-unlock,
+TOTORONG and other contributors and incorporated third-party work:
+https://github.com/JustAResearcher/gpu-unlock-ada/tree/d28c485418c3d9d034cd4bac19200bc33dd3453b
+
+Synology kernel source and compiler tooling retain their respective licenses.
+NVIDIA firmware and driver materials retain NVIDIA's licenses. They are not
+included in this repository. Build inputs and generated firmware stay local.
+No code from the non-commercial Synology NVIDIA driver package is bundled.

@@ -1,0 +1,33 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-2.0-only
+import datetime,hashlib,json,os,subprocess,sys
+from pathlib import Path
+CONF=Path('/etc/gpu-unlock-ada/mode.json');ROOT=Path('/usr/local/share/gpu-unlock-ada')
+if os.geteuid()!=0:raise SystemExit('Run as root.')
+a=sys.argv[1] if len(sys.argv)>1 else 'status'
+cfg=json.loads(CONF.read_text())
+if a in ('enable','disable','arm-once'):
+    if a!='disable':
+        for flag,key in [('-r','kernel_release'),('-v','kernel_version')]:
+            if subprocess.check_output(['/bin/uname',flag],text=True).strip()!=cfg[key]:raise SystemExit('Kernel changed; rebuild and validate before enabling.')
+        for n,digest in json.loads((ROOT/'manifest.json').read_text()).items():
+            if hashlib.sha256((ROOT/n).read_bytes()).hexdigest()!=digest:raise SystemExit('Payload checksum mismatch: '+n)
+    cfg['mode']={'enable':'persistent','disable':'disabled','arm-once':'once'}[a]
+    tmp=CONF.with_suffix('.tmp');tmp.write_text(json.dumps(cfg,indent=2)+'\n');tmp.chmod(0o600);os.replace(str(tmp),str(CONF))
+    print('Boot mode:',cfg['mode']);print('This changes future boot attempts only; the running GPU/driver is not reset.')
+elif a=='status':
+    print('Boot mode:',cfg.get('mode'));print('Target:',cfg.get('target'))
+    state=Path('/run/gpu-unlock-ada/state.json')
+    if state.exists():
+        x=json.loads(state.read_text());print('Current boot:',x.get('status'));print('Transaction:',x.get('transaction_result'));print('GPU held:',x.get('gpu_held'))
+    else:x={};print('Current boot: no unlock transaction recorded')
+    try:
+        out=subprocess.check_output(['/usr/bin/python3',str(ROOT/'read_sm_rates.py'),'--expect-uuid',cfg['expected_uuid']],text=True,stderr=subprocess.STDOUT,timeout=20)
+        data=json.loads(out);rates=data['rates']
+        print('Driver/GPU:',data['gpu'])
+        print('SM rates (0=full):',json.dumps(rates,sort_keys=True))
+        good=x.get('status')=='unlocked_verified' and all(rates[k]==0 for k in ('fmla32','imla2','imla4'))
+        print('Verified active:', 'YES' if good else 'NO')
+        sys.exit(0 if good else 2)
+    except Exception as e:print('Unable to confirm NVIDIA rate getter:',e);sys.exit(2)
+else:raise SystemExit('Usage: gpu-unlock-ada [status|enable|disable|arm-once]')

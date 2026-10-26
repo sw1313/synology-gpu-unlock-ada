@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-26",
+  "upstream_commit": "d28c485418c3d9d034cd4bac19200bc33dd3453b",
+  "warm_reboots_verified": 2,
+  "transaction_result_each_boot": [
+    0,
+    0
+  ],
+  "rm_fields_full_rate": [
+    "fmla32",
+    "imla2",
+    "imla4"
+  ],
+  "gemm_cases_each_state": 6,
+  "gemm_failures": 0,
+  "pytorch": "2.9.1+cu128 CUDA computation passed",
+  "nvenc": {
+    "result": "passed",
+    "evidence": "Recorded in the activation report; command succeeded with an empty stdout/stderr log. No standalone encoding telemetry is published."
+  },
+  "historical_upstream_suite": {
+    "run": 33,
+    "skipped": 3,
+    "result": "OK",
+    "skip_reason": "optional offline AES decoder requires PyCryptodome"
+  },
+  "limitations": [
+    "One hardware/DSM/driver combination",
+    "Two ordinary warm reboots, no long-duration certification",
+    "Instruction throughput does not establish end-to-end application speedup"
+  ],
+  "sanitization": [
+    "GPU UUID removed",
+    "boot IDs removed",
+    "private host/network/account/container details omitted",
+    "No binary modules, firmware or private runtime configuration included"
+  ]
+}

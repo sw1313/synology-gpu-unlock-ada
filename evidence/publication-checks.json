@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-26",
+  "scope": "Public source packaging; no live deployment overwritten",
+  "boot_gate_tests": {
+    "run": 15,
+    "result": "passed on Windows and Linux"
+  },
+  "isolated_installer_tests": {
+    "run": 5,
+    "result": "passed on Linux",
+    "host_changes": "temporary test directories only; system commands mocked"
+  },
+  "patch_applicability": {
+    "result": "git apply --check passed against pinned pristine upstream"
+  },
+  "shell_syntax": "bash -n passed for all four build scripts",
+  "python_syntax": "py_compile passed",
+  "build_validation_limit": "The reorganized build wrappers were syntax-checked; full clean-room build and a second NAS installation have not been repeated. Historical module builds and real-asset upstream tests are recorded separately."
+}
